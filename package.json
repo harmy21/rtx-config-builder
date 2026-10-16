@@ -1,0 +1,11 @@
+{
+  "name": "rtx-config-builder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "YAMAHA RTX series config generator (static web app)",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "test": "node --test"
+  },
+  "engines": { "node": ">=20" }
+}

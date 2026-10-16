@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RTX Config Builder</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 38 38" aria-hidden="true">
+        <rect class="m-body" x="1" y="9" width="36" height="20" rx="4"/>
+        <rect class="m-port" x="5" y="14" width="4" height="4" rx="1"/><rect class="m-port" x="11" y="14" width="4" height="4" rx="1"/>
+        <rect class="m-port" x="5" y="20" width="4" height="4" rx="1"/><rect class="m-port" x="11" y="20" width="4" height="4" rx="1"/>
+        <rect class="m-wan" x="26" y="14" width="8" height="10" rx="1.5"/>
+      </svg>
+      <div>
+        <h1>RTX Config Builder</h1>
+        <p>YAMAHA RTXシリーズ向け 設定ファイル作成</p>
+      </div>
+    </div>
+    <button type="button" class="btn sm" id="btnReset">入力を初期値に戻す</button>
+  </header>
+
+  <main class="layout" id="layout" data-view="form">
+    <section class="form" id="formPane" aria-label="設定の入力">
+      <div class="tabs" role="tablist" id="tabs" aria-label="設定項目"></div>
+
+      <!-- 機種 -->
+      <div class="panel" id="p-model" role="tabpanel" aria-labelledby="t-model">
+        <h2>ルーターの機種</h2>
+        <div class="mcards" id="modelCards" role="radiogroup" aria-label="機種"></div>
+        <div class="ports">
+          <div id="portsSvg"></div>
+          <ul class="legend" aria-hidden="true">
+            <li><span class="sw lan"></span>LAN側</li>
+            <li><span class="sw wan"></span>WAN側</li>
+            <li><span class="sw off"></span>未使用</li>
+          </ul>
+        </div>
+        <div class="grid2 grid-wide">
+          <div class="f"><label for="lanIf">LAN側インターフェース</label><select id="lanIf" data-k="lanIf"></select></div>
+          <div class="f"><label for="wanIf">WAN側インターフェース</label><select id="wanIf" data-k="wanIf"></select></div>
+        </div>
+        <ul class="notes" id="modelNotes"></ul>
+        <p class="hint">ポート割り当てを工場出荷時から変更している場合は、実機の設定に合わせて選んでください。</p>
+        <div class="f">
+          <label for="memo">メモ</label>
+          <input id="memo" data-k="memo" type="text" maxlength="60" placeholder="例 tokyo-office-rtx" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <small>configの先頭にコメントとして出力します。半角英数字をおすすめします。</small>
+        </div>
+      </div>
+
+      <!-- LAN -->
+      <div class="panel" id="p-lan" role="tabpanel" aria-labelledby="t-lan" hidden>
+        <h2>LAN側</h2>
+        <div class="grid2">
+          <div class="f"><label for="lanIp">ルーターのIPアドレス</label><input id="lanIp" data-k="lanIp" type="text" class="mono" inputmode="decimal" placeholder="192.168.100.1" autocomplete="off" spellcheck="false"></div>
+          <div class="f"><label for="lanPrefix">プレフィックス長</label><input id="lanPrefix" data-k="lanPrefix" type="number" min="8" max="30" inputmode="numeric"><small>/24 は 255.255.255.0 です。</small></div>
+        </div>
+        <hr class="divider">
+        <label class="chk" for="dhcpOn"><input id="dhcpOn" data-k="dhcpOn" type="checkbox"><span>DHCPサーバーを有効にする<small>LAN内の端末にIPアドレスを自動で配ります。</small></span></label>
+        <div class="stack" data-when="dhcpOn=true">
+          <div class="grid2">
+            <div class="f"><label for="dhcpStart">配布の開始アドレス</label><input id="dhcpStart" data-k="dhcpStart" type="text" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
+            <div class="f"><label for="dhcpEnd">配布の終了アドレス</label><input id="dhcpEnd" data-k="dhcpEnd" type="text" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
+            <div class="f"><label for="dhcpExpire">リース時間（時間）</label><input id="dhcpExpire" data-k="dhcpExpire" type="number" min="1" max="72" inputmode="numeric"></div>
+          </div>
+          <div><button type="button" class="btn link" id="btnAutoRange">LANのアドレスから範囲を自動計算する</button></div>
+          <div class="f">
+            <span class="lab" id="lbl-ddns">端末に配るDNSサーバー</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-ddns">
+              <label><input type="radio" name="dhcpDnsMode" data-k="dhcpDnsMode" value="router" id="ddns-router"><span>ルーター自身</span></label>
+              <label><input type="radio" name="dhcpDnsMode" data-k="dhcpDnsMode" value="custom" id="ddns-custom"><span>指定する</span></label>
+            </div>
+          </div>
+          <div class="grid2" data-when="dhcpDnsMode=custom">
+            <div class="f"><label for="dhcpDns1">DNSサーバー1</label><input id="dhcpDns1" data-k="dhcpDns1" type="text" class="mono" inputmode="decimal" placeholder="8.8.8.8" autocomplete="off" spellcheck="false"></div>
+            <div class="f"><label for="dhcpDns2">DNSサーバー2（省略可）</label><input id="dhcpDns2" data-k="dhcpDns2" type="text" class="mono" inputmode="decimal" placeholder="8.8.4.4" autocomplete="off" spellcheck="false"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VLAN -->
+      <div class="panel" id="p-vlan" role="tabpanel" aria-labelledby="t-vlan" hidden>
+        <h2>VLAN</h2>
+        <p class="lead">LANをいくつかのネットワークに分けます。ネットワークごとにルーターのIPアドレスを持ち、DHCPも別々に配れます。</p>
+        <div class="f">
+          <span class="lab" id="lbl-vlan">分け方</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-vlan">
+            <label><input type="radio" name="vlanMode" data-k="vlanMode" value="none" id="vm-none"><span>分けない</span></label>
+            <label><input type="radio" name="vlanMode" data-k="vlanMode" value="port" id="vm-port"><span>ポートで分ける</span></label>
+            <label><input type="radio" name="vlanMode" data-k="vlanMode" value="tag" id="vm-tag"><span>タグで分ける（802.1Q）</span></label>
+          </div>
+        </div>
+
+        <div class="stack" data-when="vlanMode=port">
+          <p class="hint">LAN1のポートを、VLANごとに割り当てます。どのVLANにも選ばなかったポートは、メインのLAN（LANタブのネットワーク）になります。設定の反映には、保存後の再起動が必要になることがあります。</p>
+          <div class="rows" id="vpRows"></div>
+          <div><button type="button" class="btn" id="btnAddVp">＋ VLANを追加</button></div>
+        </div>
+
+        <div class="stack" data-when="vlanMode=tag">
+          <p class="hint">スイッチなどと1本のケーブルでつなぎ、VLAN IDで通信を分けます。タグなしの通信は、メインのLANとして扱われます。</p>
+          <div class="f" style="max-width:340px"><label for="vlanTrunk">タグを通すインターフェース</label><select id="vlanTrunk" data-k="vlanTrunk"></select></div>
+          <div class="rows" id="vtRows"></div>
+          <div><button type="button" class="btn" id="btnAddVt">＋ VLANを追加</button></div>
+        </div>
+
+        <p class="hint" data-when="vlanMode=port|tag">VLAN間の通信を遮断するパケットフィルターは出力しません。管理画面へは、メインのLANからだけ入れます。</p>
+      </div>
+
+      <!-- WAN -->
+      <div class="panel" id="p-wan" role="tabpanel" aria-labelledby="t-wan" hidden>
+        <h2>WAN側（インターネット接続）</h2>
+        <div class="f">
+          <span class="lab" id="lbl-wan">回線の種類</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-wan">
+            <label><input type="radio" name="wanType" data-k="wanType" value="pppoe" id="wt-pppoe"><span>PPPoE</span></label>
+            <label><input type="radio" name="wanType" data-k="wanType" value="static" id="wt-static"><span>固定IP</span></label>
+            <label><input type="radio" name="wanType" data-k="wanType" value="dhcp" id="wt-dhcp"><span>DHCP</span></label>
+            <label class="off"><input type="radio" name="wanType-off" id="wt-ipoe" disabled><span>IPoE（未対応）</span></label>
+          </div>
+        </div>
+
+        <div class="stack" data-when="wanType=pppoe">
+          <div class="grid2">
+            <div class="f"><label for="pppoeUser">接続ID</label><input id="pppoeUser" data-k="pppoeUser" type="text" class="mono" placeholder="user@example.ne.jp" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+            <div class="f"><label for="pppoePass">接続パスワード</label><input id="pppoePass" data-k="pppoePass" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="f"><label for="pppoeMtu">MTU / MRU</label><input id="pppoeMtu" data-k="pppoeMtu" type="number" min="1200" max="1492" inputmode="numeric"><small>一般的な既定値は 1454 です。</small></div>
+          </div>
+          <label class="chk" for="mss"><input id="mss" data-k="mss" type="checkbox"><span>TCP MSS を自動調整する<small>大きなパケットで通信が止まる問題を避けます。</small></span></label>
+          <p class="hint">接続IDとパスワードはこのページの中だけで扱い、ブラウザには保存しません。再読み込みすると消えます。</p>
+        </div>
+
+        <div class="stack" data-when="wanType=static">
+          <div class="grid2">
+            <div class="f"><label for="wanIp">WAN側のIPアドレス</label><input id="wanIp" data-k="wanIp" type="text" class="mono" inputmode="decimal" placeholder="203.0.113.2" autocomplete="off" spellcheck="false"></div>
+            <div class="f"><label for="wanPrefix">プレフィックス長</label><input id="wanPrefix" data-k="wanPrefix" type="number" min="8" max="30" inputmode="numeric"></div>
+            <div class="f"><label for="wanGw">デフォルトゲートウェイ</label><input id="wanGw" data-k="wanGw" type="text" class="mono" inputmode="decimal" placeholder="203.0.113.1" autocomplete="off" spellcheck="false"></div>
+          </div>
+        </div>
+
+        <p class="hint" data-when="wanType=dhcp">上位のルーターやCATVモデムから、IPアドレスとゲートウェイを自動で受け取ります。</p>
+
+        <hr class="divider">
+        <label class="chk" for="nat"><input id="nat" data-k="nat" type="checkbox"><span>NAT（IPマスカレード）を使う<small>LAN内の端末が、WAN側の1つのアドレスでインターネットに接続します。</small></span></label>
+
+        <hr class="divider">
+        <div class="f">
+          <span class="lab" id="lbl-dns">ルーターが使うDNSサーバー</span>
+          <div class="seg" role="radiogroup" aria-labelledby="lbl-dns">
+            <label data-when="wanType=pppoe|dhcp"><input type="radio" name="dnsMode" data-k="dnsMode" value="auto" id="dns-auto"><span>回線から自動取得</span></label>
+            <label><input type="radio" name="dnsMode" data-k="dnsMode" value="manual" id="dns-manual"><span>指定する</span></label>
+          </div>
+        </div>
+        <div class="grid2" data-when="dnsMode=manual">
+          <div class="f"><label for="dns1">DNSサーバー1</label><input id="dns1" data-k="dns1" type="text" class="mono" inputmode="decimal" placeholder="8.8.8.8" autocomplete="off" spellcheck="false"></div>
+          <div class="f"><label for="dns2">DNSサーバー2（省略可）</label><input id="dns2" data-k="dns2" type="text" class="mono" inputmode="decimal" placeholder="8.8.4.4" autocomplete="off" spellcheck="false"></div>
+        </div>
+      </div>
+
+      <!-- ポート開放 -->
+      <div class="panel" id="p-forward" role="tabpanel" aria-labelledby="t-forward" hidden>
+        <h2>ポート開放</h2>
+        <p class="lead">WAN側から届いた通信を、LAN内の機器へ転送します。NATを使う設定のときだけ有効です。</p>
+        <div class="chips" id="fwPresets"><span class="lab">よく使う設定</span></div>
+        <div class="rows" id="fwRows"></div>
+        <div><button type="button" class="btn" id="btnAddFw">＋ 行を追加</button></div>
+      </div>
+
+      <!-- ルート -->
+      <div class="panel" id="p-route" role="tabpanel" aria-labelledby="t-route" hidden>
+        <h2>スタティックルート</h2>
+        <p class="lead">LANの先にある別のネットワークへ向かう経路を追加します。</p>
+        <div class="rows" id="rtRows"></div>
+        <div><button type="button" class="btn" id="btnAddRt">＋ 経路を追加</button></div>
+      </div>
+
+      <!-- VPN -->
+      <div class="panel" id="p-vpn" role="tabpanel" aria-labelledby="t-vpn" hidden>
+        <h2>VPN</h2>
+        <p class="lead">拠点どうしをつなぐIPsecと、外出先のPCやスマホからつなぐL2TP/IPsecを設定できます。パケットフィルターは出力しません。</p>
+
+        <p class="sec-title">拠点間 IPsec</p>
+        <p class="hint">離れた拠点のLAN同士をつなぎます。相手側のルーターにも、同じ暗号方式と事前共有鍵が必要です。追加した順にトンネル1、2…と番号が付きます。</p>
+        <div class="grid2">
+          <div class="f"><label for="vpnHash">認証アルゴリズム</label><select id="vpnHash" data-k="vpnHash"><option value="sha256">SHA-256（推奨）</option><option value="sha">SHA-1</option></select></div>
+          <div class="f"><label for="vpnDh">DHグループ</label><select id="vpnDh" data-k="vpnDh"><option value="modp2048">modp2048（推奨）</option><option value="modp1024">modp1024</option></select></div>
+        </div>
+        <label class="chk" for="vpnDpd"><input id="vpnDpd" data-k="vpnDpd" type="checkbox"><span>相手の停止を検知する（DPD）<small>相手が応答しなくなったとき、トンネルを張り直します。</small></span></label>
+        <label class="chk" for="vpnMss"><input id="vpnMss" data-k="vpnMss" type="checkbox"><span>TCP MSS を自動調整する</span></label>
+        <div class="rows" id="vsRows"></div>
+        <div><button type="button" class="btn" id="btnAddVs">＋ 拠点を追加</button></div>
+        <p class="hint">相手のIPアドレスが固定でない場合は「不定（any）」を選びます。その場合は、相手側からこのルーターへ接続する形になります。</p>
+
+        <hr class="divider">
+        <label class="chk" for="l2tpOn"><input id="l2tpOn" data-k="l2tpOn" type="checkbox"><span>リモートアクセス（L2TP/IPsec）を使う<small>Windows、macOS、iPhone、Androidの標準VPN機能からつなげます。</small></span></label>
+        <div class="stack" data-when="l2tpOn=true">
+          <div class="grid2">
+            <div class="f"><label for="l2tpPsk">事前共有鍵</label><input id="l2tpPsk" data-k="l2tpPsk" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="f"><label for="l2tpClients">同時接続数</label><input id="l2tpClients" data-k="l2tpClients" type="number" min="1" max="8" inputmode="numeric"><small>1〜8。接続数ごとにトンネルを1本使います。</small></div>
+            <div class="f"><label for="l2tpPoolStart">配布アドレスの開始</label><input id="l2tpPoolStart" data-k="l2tpPoolStart" type="text" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
+            <div class="f"><label for="l2tpPoolEnd">配布アドレスの終了</label><input id="l2tpPoolEnd" data-k="l2tpPoolEnd" type="text" class="mono" inputmode="decimal" autocomplete="off" spellcheck="false"></div>
+          </div>
+          <div><button type="button" class="btn link" id="btnAutoPool">LANのアドレスから範囲を自動計算する</button></div>
+          <p class="hint">配布アドレスはLANと同じネットワーク内で、DHCPの配布範囲と重ならない場所にします。</p>
+          <p class="lab">接続ユーザー</p>
+          <div class="rows" id="l2uRows"></div>
+          <div><button type="button" class="btn" id="btnAddL2u">＋ ユーザーを追加</button></div>
+          <p class="hint">ルーターがNATの内側にある場合、Windows側でレジストリ AssumeUDPEncapsulationContextOnSendRule の設定が必要になることがあります。</p>
+        </div>
+        <p class="hint" data-when="wanType=dhcp">WAN側がDHCPのときは、上位のルーターで UDP 500、UDP 4500、ESP をこのルーターへ転送してください。</p>
+      </div>
+
+      <!-- 管理 -->
+      <div class="panel" id="p-admin" role="tabpanel" aria-labelledby="t-admin" hidden>
+        <h2>管理設定</h2>
+        <div class="grid2">
+          <div class="f"><label for="adminPass">管理パスワード</label><input id="adminPass" data-k="adminPass" type="password" autocomplete="new-password" spellcheck="false"><small>設定変更に必要なパスワードです。</small></div>
+          <div class="f"><label for="loginPass">ログインパスワード</label><input id="loginPass" data-k="loginPass" type="password" autocomplete="new-password" spellcheck="false"><small>ログインだけに使うパスワードです。</small></div>
+        </div>
+        <hr class="divider">
+        <p class="sec-title">LANからの管理アクセス</p>
+        <label class="chk" for="httpd"><input id="httpd" data-k="httpd" type="checkbox"><span>Web GUI を使う</span></label>
+        <div class="grid2">
+          <div class="f"><label for="telnet">Telnet</label><select id="telnet" data-k="telnet"><option value="off">使わない（推奨）</option><option value="lan">LANからのみ許可</option></select></div>
+          <div class="f"><label for="ssh">SSH</label><select id="ssh" data-k="ssh"><option value="lan">LANからのみ許可</option><option value="off">使わない</option></select></div>
+        </div>
+        <hr class="divider">
+        <label class="chk" for="ntp"><input id="ntp" data-k="ntp" type="checkbox"><span>時刻を自動で合わせる<small>タイムゾーンを日本時間にして、ntp.nict.jp から時刻を取得します。</small></span></label>
+      </div>
+    </section>
+
+    <aside class="out" id="outPane" aria-label="生成されたconfig">
+      <div class="con">
+        <div class="con-head">
+          <div class="con-title"><span class="led" id="led"></span><span id="conModel">RTX830</span><span class="con-meta" id="lineCount"></span></div>
+          <label class="chk" for="maskPw"><input id="maskPw" data-k="maskPw" type="checkbox"><span>パスワードを伏せる</span></label>
+          <button type="button" class="btn primary sm" id="btnCopy">configをコピー</button>
+        </div>
+        <div class="con-body" id="conBody" tabindex="0" aria-label="config本文"><div id="conLines"></div></div>
+        <p class="note-foot">コピーされる内容にはパスワードの実際の値が含まれます。</p>
+      </div>
+      <div class="issues" id="issues" aria-live="polite"></div>
+      <details class="tips">
+        <summary>実機に入れる前に</summary>
+        <div>
+          <ol>
+            <li>いまの設定を <code>show config</code> で控えておきます。</li>
+            <li>検証用の機器か、止めても困らない時間帯で試します。</li>
+            <li>貼り付けたあとに <code>save</code> で保存します。</li>
+          </ol>
+          <p style="margin-top:8px">コマンドはファームウェアのバージョンで差があります。不明な行はヤマハのコマンドリファレンスで確認してください。</p>
+        </div>
+      </details>
+    </aside>
+  </main>
+
+  <nav class="switch" id="switchBar" aria-label="表示の切り替え">
+    <button type="button" data-view="form" aria-pressed="true">設定を入力</button>
+    <button type="button" data-view="out" aria-pressed="false">configを見る<span class="badge" id="swBadge" hidden></span></button>
+  </nav>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script src="js/logic.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
